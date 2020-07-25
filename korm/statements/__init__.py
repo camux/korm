@@ -114,7 +114,6 @@ class Statement(BaseStatement):
                            instance.
 
         """
-        print('desde args from model....', self.model)
         if not self.model or inspect.isclass(self.model):
             raise TypeError(self.model)
         return tuple(self._get_column(col) for col in self.model.column_names())
@@ -313,7 +312,8 @@ class Statement(BaseStatement):
 
     @_callback('where', primary_keys=True)
     def update(self, **kwargs):
-        """Set's the statement as an ``UPDATE`` statement.  This will
+        """
+        Set's the statement as an ``UPDATE`` statement.  This will
         automatically set a ``where`` statement, using the primary keys.
 
         :param kwargs:  Values to use as column names, query args for the
@@ -349,6 +349,34 @@ class Statement(BaseStatement):
         return self.set_statement(
             'delete',
             f'DELETE FROM {tablename}'
+        )
+
+    @_callback('where', primary_keys=True)
+    def write(self, kwargs):
+        """
+        Set's the statement as an ``UPDATE`` statement.  This will
+        automatically set a ``where`` statement, using the primary keys.
+
+        :param kwargs:  Values to use as column names, query args for the
+                        statement.  These are probably not used much as you
+                        should normally just set the model to an instance of
+                        :class:`ModelABC` for the column names and values.
+
+        :raises TypeError:  If no args were able to be parsed for the statement.
+        """
+        print('leguooooo....', kwargs)
+        if kwargs:
+            self.kwargs = kwargs
+
+        tablename = self.model.tablename()
+        args, colstring = self._get_args_from_dict(self.kwargs)
+        arg_string = ', '.join(
+            map(lambda _: '${}'.format(next(self.count)), range(len(args)))
+        )
+        return self.set_statement(
+            'update',
+            f'UPDATE {tablename} SET ({colstring}) = ({arg_string})',
+            args
         )
 
 
@@ -400,3 +428,16 @@ def delete(model, **kwargs):
     """
 
     return Statement(model, kwargs).delete()
+
+
+def write(model, data, **kwargs):
+    """
+    Write statement factory.
+
+    :param model:  A :class:`ModelABC` subclass instance to create the statement
+                   for.
+    :param kwargs:  Used for instance values, if the statement is created with
+                    a class, not an instance.
+    """
+    print('yeaaaaa', kwargs)
+    return Statement(model, kwargs).write(data)

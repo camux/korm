@@ -52,7 +52,8 @@ class ClauseDescriptor(SimpleDescriptor):
 
 
 class StatementValues:
-    """Container that holds the values for a :class:`BaseStatement`.  This
+    """
+    Container that holds the values for a :class:`BaseStatement`.  This
     only allows a single statement to be set on an instance, avoiding errors
     with the argument count for the query args.
 
@@ -174,13 +175,11 @@ class BaseStatement(StatementABC):
     Implementation of the :class:`StatementABC`.
     """
 
-    __slots__ = ('_values', '_model', 'kwargs', 'count', 'from_dict')
+    __slots__ = ('_values', '_model', 'kwargs', 'count')
 
     def __init__(self, model, kwargs={}, arg_count: int = 1):
         self.model = model
-        # self.from_dict = from_dict
         self.count = counter(arg_count)
-        print('pasalo ... ', kwargs)
         self.kwargs = kwargs
         self._values = StatementValues()
 
@@ -198,7 +197,6 @@ class BaseStatement(StatementABC):
 
     @model.setter
     def model(self, model):
-        print('model ...', model)
         if model:
             if inspect.isclass(model) and not issubclass(model, ModelABC):
                 raise InvalidModel(model)
@@ -206,9 +204,12 @@ class BaseStatement(StatementABC):
                 raise InvalidModel(model)
         self._model = model
 
-    def set_statement(self, key: str, query_string: str,
-                      args: typing.Tuple[typing.Any]=None) -> 'BaseStatement':
-        """Set the statement for an instance, and return ``self`` for method
+    def set_statement(
+            self, key: str,
+            query_string: str,
+            args: typing.Tuple[typing.Any] = None) -> 'BaseStatement':
+        """
+        Set the statement for an instance, and return ``self`` for method
         chaining.
 
         """
@@ -217,15 +218,16 @@ class BaseStatement(StatementABC):
         return self
 
     def set_count(self, count: int) -> None:
-        """Reset's the counter for an instance.
+        """
+        Reset's the counter for an instance.
 
         :param count:  The number to reset the counter to.
-
         """
         self.count = counter(count)
 
     def query_string(self, sep='\n') -> str:
-        """Get the query string set on the instance.
+        """
+        Get the query string set on the instance.
 
         :param sep:  A seperator used to join the statement and the clauses.
                      Defaults to '\\n'.
@@ -235,7 +237,8 @@ class BaseStatement(StatementABC):
         return self._values.query_string(sep)
 
     def query_args(self) -> typing.Iterable[typing.Any]:
-        """Get the query args set on the instance.  This will return an empty
+        """
+        Get the query args set on the instance.  This will return an empty
         tuple if no args have been set on the instance yet.
 
         If args are set on the instance, then they will be returned in the
@@ -243,6 +246,16 @@ class BaseStatement(StatementABC):
 
         """
         return self._values.query_args()
+
+    def _get_args_from_dict(self, dict_values, tablename=False) -> list:
+        values = []
+        cols_name = []
+        for k, v in dict_values.items():
+            cols_name.append(k)
+            values.append(v)
+        args = tuple(values)
+        colstring = ', '.join(cols_name)
+        return args, colstring
 
     def _column_string(self, tablename=False) -> str:
         """

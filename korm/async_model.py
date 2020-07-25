@@ -1,10 +1,8 @@
 import typing
 import uuid
-# import asyncpg
 from .abstract import AsyncContextManagerABC
-# from .connection_managers import ConnectionManager, PoolManager
 from .exceptions import ExecutionFailure
-from .statements import select, delete, update, insert
+from .statements import select, delete, update, insert, write
 
 
 def _quote_if_str(val):
@@ -163,7 +161,8 @@ class BaseModel(metaclass=ModelMeta):
 
     @classmethod
     def attr_name_for_column(cls, column_name: str) -> str:
-        """Get the class attribute name for a given database column name.
+        """
+        Get the class attribute name for a given database column name.
 
         This is used when setting instance values for :class`Column`'s, and
         allows access to the attribute name, whether the ``column_name`` was
@@ -246,8 +245,8 @@ class BaseModel(metaclass=ModelMeta):
 
     @classmethod
     def primary_keys(cls) -> typing.Tuple[str]:
-        """Returns a tuple of column names that are also primary keys.
-
+        """
+        Returns a tuple of column names that are also primary keys.
         """
         return tuple(c.key for (_, c) in cls._columns()
                      if c.primary_key is True)
@@ -363,7 +362,7 @@ class AsyncModel(BaseModel):
     @classmethod
     async def create(cls, records) -> None:
         """
-        Insert record(s) to the database.
+        Create/insert record(s) in the table.
 
         :raises .exceptions.ExecutionFailure: If no records were created.
 
@@ -381,6 +380,32 @@ class AsyncModel(BaseModel):
                 # records were updated/saved to the database.
                 if not res_string[-1] == '1':  # pragma: no cover
                     raise ExecutionFailure(f'Failed to insert: {rec}')
+
+    @classmethod
+    async def write(cls, records, args) -> None:
+        """
+        Update records of the model.
+
+        :raises .exceptions.ExecutionFailure: If no records were updated
+            to the database.
+
+        **Example:**
+
+        .. code-block:: python
+
+            >>> await User.write([user], {name:'foo'})
+
+        """
+        async with cls.pool.acquire() as conn:
+            # try an update first. If nothing is updated then the
+            # update_result will be 'UPDATE 0'.
+            for rec in records:
+                res_string = await conn.execute(*write(rec, args))
+
+        # check the result string, it should end with a '1' if any records
+        # were updated/saved to the database.
+        if not res_string[-1] == '1':  # pragma: no cover
+            raise ExecutionFailure(f'Failed to update: {cls}')
 
     async def save(self) -> None:
         """
@@ -401,12 +426,7 @@ class AsyncModel(BaseModel):
             # try an update first. If nothing is updated then the
             # update_result will be 'UPDATE 0'.
             res_string = await conn.execute(*update(self))
-            if res_string == 'UPDATE 0':
-                # if the update failed, then we try an insert
-                # statement, and let any errors bubble up.
-                # if the insert was successful, then the res_string
-                # will be 'INSERT 0 1'.
-                res_string = await conn.execute(*insert(self))
+
         # check the result string, it should end with a '1' if any records
         # were updated/saved to the database.
         if not res_string[-1] == '1':  # pragma: no cover
