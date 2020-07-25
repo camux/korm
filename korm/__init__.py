@@ -2,11 +2,11 @@ from .async_model import AsyncModel, BaseModel, Column
 from .abstract import ModelABC, AsyncContextManagerABC, AsyncModelABC
 from .statements import StatementABC, Statement, BaseStatement, \
     select, insert, update, delete
-from .connection_managers import ConnectionManager, PoolManager
+from .connection_managers import PoolManager
 from .exceptions import BaseException, ExecutionFailure, InvalidModel
 
-__author__ = """Michael Housh"""
-__email__ = 'mhoush@houshhomeenergy.com'
+__author__ = """Oscar Alvarez"""
+__email__ = 'info@melhous.com'
 __version__ = '0.1.1'
 
 __all__ = (
@@ -20,7 +20,6 @@ __all__ = (
     'BaseModel',
     'Column',
     # connection managers
-    'ConnectionManager',
     'PoolManager',
     # statement classes
     'BaseStatement',

@@ -2,7 +2,7 @@ import typing
 import uuid
 # import asyncpg
 from .abstract import AsyncContextManagerABC
-from .connection_managers import ConnectionManager, PoolManager
+# from .connection_managers import ConnectionManager, PoolManager
 from .exceptions import ExecutionFailure
 from .statements import select, delete, update, insert
 
@@ -17,7 +17,8 @@ def _quote_if_str(val):
 
 
 class Column:
-    """A descriptor class that represents a table column.
+    """
+    A descriptor class that represents a table column.
 
     :param key:  The table column name in the database.  If not set, then this
                  will be set to the attribute name used on the
@@ -32,7 +33,7 @@ class Column:
     """
     __slots__ = ('key', 'default', 'primary_key', '_hidden_key')
 
-    def __init__(self, key: str=None, default=None, primary_key=False):
+    def __init__(self, key: str = None, default=None, primary_key=False):
         self.key = key
         self.default = default
         self.primary_key = primary_key
@@ -71,7 +72,8 @@ class Column:
 
 
 class ModelMeta(type):
-    """Meta class for ``BaseModel``, which ensures the column's keys
+    """
+    Meta class for ``BaseModel``, which ensures the column's keys
     for the model are set, or will default to the attribute name a ``Column``
     was declared for.
 
@@ -195,7 +197,8 @@ class BaseModel(metaclass=ModelMeta):
 
     @classmethod
     def ensured_column_name(cls, attr_name: str) -> str:
-        """This is helper to always return the database column name for the
+        """
+        This is helper to always return the database column name for the
         input.
 
         This is essentially the opposite of :meth:`attr_name_for_column`.
@@ -226,16 +229,16 @@ class BaseModel(metaclass=ModelMeta):
 
     @classmethod
     def column_names(cls) -> typing.Tuple[str]:
-        """Returns a tuple of the column names for the class.
-
+        """
+        Returns a tuple of the column names for the class.
         """
         return tuple(c.key for (_, c) in cls._columns())
 
     @classmethod
     def tablename(cls):
-        """Returns the tablename set for the class, if one is not set, then
+        """
+        Returns the tablename set for the class, if one is not set, then
         we default to the lowercase version of the class name.
-
         """
         if cls.__tablename__ is not None:
             return cls.__tablename__
@@ -273,7 +276,8 @@ class BaseModel(metaclass=ModelMeta):
 
 # TODO:  Update the ``delete`` method to be a classmethod, that accepts kwargs
 class AsyncModel(BaseModel):
-    """Extends the :class:`BaseModel` class to include helpful database
+    """
+    Extends the :class:`BaseModel` class to include helpful database
     queries.
 
     By default ``get`` and ``get_one`` methods return :class:`asyncpg.Record`
@@ -333,45 +337,31 @@ class AsyncModel(BaseModel):
     of your subclass.
     """
 
-    @classmethod
-    def connection(cls) -> typing.Union[ConnectionManager, PoolManager]:
-        """Obtain the connection manager that was registered with the
-        subclass during creation.
+    # @classmethod
+    # def pool(cls) -> PoolManager:
+    #     """
+    #     Obtain the connection Pool that was registered with the
+    #     subclass during creation.
+    #
+    #     This is typically used with ``async with`` to gain access to an
+    #     :class:`asyncpg.Connection` instance.
+    #
+    #     **Example:**
+    #
+    #     .. code-block:: python
+    #
+    #         >>> async with User.connection() as conn:
+    #                 # do something with the connection.
+    #
+    #     """
+    #     return cls._pool
 
-        This is typically used with ``async with`` to gain access to an
-        :class:`asyncpg.Connection` instance.
-
-        **Example:**
-
-        .. code-block:: python
-
-            >>> async with User.connection() as conn:
-                    # do something with the connection.
-
-        """
-        return cls._connection
-
-    @classmethod
-    def pool(cls) -> PoolManager:
-        """
-        Obtain the connection Pool that was registered with the
-        subclass during creation.
-
-        This is typically used with ``async with`` to gain access to an
-        :class:`asyncpg.Connection` instance.
-
-        **Example:**
-
-        .. code-block:: python
-
-            >>> async with User.connection() as conn:
-                    # do something with the connection.
-
-        """
-        return cls._pool
+    async def create(self) -> None:
+        pass
 
     async def save(self) -> None:
-        """Update or insert an instance to the database.
+        """
+        Update or insert an instance to the database.
 
         :raises .exceptions.ExecutionFailure: If no records were updated or
                                               saved to the database.
@@ -383,37 +373,34 @@ class AsyncModel(BaseModel):
             >>> user = User(name='foo')
             >>> await user.save()
 
-
         """
-        async with self.connection() as conn:
-            async with conn.transaction():
-                # try an update first. If nothing is updated then the
-                # update_result will be 'UPDATE 0'.
-                res_string = await conn.execute(*update(self))
-                if res_string == 'UPDATE 0':
-                    # if the update failed, then we try an insert
-                    # statement, and let any errors bubble up.
-                    # if the insert was successful, then the res_string
-                    # will be 'INSERT 0 1'.
-                    res_string = await conn.execute(*insert(self))
+        async with self.pool.acquire() as conn:
+            # try an update first. If nothing is updated then the
+            # update_result will be 'UPDATE 0'.
+            res_string = await conn.execute(*update(self))
+            if res_string == 'UPDATE 0':
+                # if the update failed, then we try an insert
+                # statement, and let any errors bubble up.
+                # if the insert was successful, then the res_string
+                # will be 'INSERT 0 1'.
+                res_string = await conn.execute(*insert(self))
         # check the result string, it should end with a '1' if any records
         # were updated/saved to the database.
         if not res_string[-1] == '1':  # pragma: no cover
             raise ExecutionFailure(f'Failed to insert or update: {self}')
 
     async def delete(self) -> None:
-        """Delete an instance from the database.
+        """
+        Delete an instance from the database.
 
         :raises .exceptions.ExecutionFailure:  If no records were deleted from
                                                the database.
-
         """
-        async with self.connection() as conn:
-            async with conn.transaction():
-                # Delete the row from the database
-                # If the statement was successful, then the return value will
-                # be 'DELETE 1'
-                delete_result = await conn.execute(*delete(self))
+        async with self.pool.acquire() as conn:
+            # Delete the row from the database
+            # If the statement was successful, then the return value will
+            # be 'DELETE 1'
+            delete_result = await conn.execute(*delete(self))
 
         if not delete_result[-1] == '1':
             raise ExecutionFailure(f'Failed to delete: {self}')
@@ -460,9 +447,7 @@ class AsyncModel(BaseModel):
         # parse whether to return records or not.
         records = cls._parse_records(records)
 
-        # async with cls.connection() as conn:
-        # async with cls.pool().acquire() as conn:
-        async with cls._pool.acquire() as conn:
+        async with cls.pool.acquire() as conn:
             stmt = select(cls)
             # set a where clause on the statement, if kwargs were passed in.
             if kwargs:
@@ -478,7 +463,7 @@ class AsyncModel(BaseModel):
             return res
 
     @classmethod
-    async def get_one(cls, record: bool=None, **kwargs) -> typing.Any:
+    async def get_one(cls, record: bool = True, **kwargs) -> typing.Any:
         """
         Get a single item from the database.
 
@@ -504,21 +489,20 @@ class AsyncModel(BaseModel):
         # parse whether to return records or not.
         record = cls._parse_records(record)
 
-        async with cls.connection() as conn:
-            async with conn.transaction():
-                stmt = select(cls)
-                # set a where clause on the statement, if kwargs were passed
-                # in.
-                if kwargs:
-                    stmt.where(**kwargs)
-                # get the result from the database.
-                res = await conn.fetchrow(*stmt)
+        async with cls.pool.acquire() as conn:
+            stmt = select(cls)
+            # set a where clause on the statement, if kwargs were passed
+            # in.
+            if kwargs:
+                stmt.where(**kwargs)
+            # get the result from the database.
+            res = await conn.fetchrow(*stmt)
 
-                if record is False:
-                    # return instances of the class, not records
-                    return cls.from_record(res)
-                # return instances of the asyncpg record class
-                return res
+            if record is False:
+                # return instances of the class, not records
+                return cls.from_record(res)
+            # return instances of the asyncpg record class
+            return res
 
     @classmethod
     def from_record(cls, record) -> typing.Any:
@@ -530,24 +514,10 @@ class AsyncModel(BaseModel):
         return cls(**record)
 
     @classmethod
-    def __init_subclass__(cls, connection=None, pool=None, **kwargs):
+    def __init_subclass__(cls, pool=None, **kwargs):
         super().__init_subclass__(**kwargs)
 
-        err = False
-        if connection is not None:
-            if not isinstance(connection, AsyncContextManagerABC):
-                err = True
-            else:
-                cls._connection = connection
-        elif pool is not None:
-            if not isinstance(pool, AsyncContextManagerABC):
-                err = True
-            else:
-                cls._pool = pool
-
-        # print(err)
-
-        # if err is True or (not hasattr(cls, '_connection') and not hasattr(cls, '_pool')):
-        #     raise RuntimeError(
-        #         (f'connection should be an asyncpg.Connection')
-        #     )
+        if pool and isinstance(pool, AsyncContextManagerABC):
+            cls.pool = pool
+        else:
+            raise RuntimeError((f'connection should be an asyncpg.Pool'))
