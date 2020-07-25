@@ -18,7 +18,8 @@ ItemsType = typing.Iterable[typing.Tuple[str, typing.Any]]
 
 
 def _callback(callback, *args, **kwargs):
-    """Helper that marks a method to call another method on the
+    """
+    Helper that marks a method to call another method on the
     same class when complete.
 
     :param callback:  The method name to call when the marked method is complete
@@ -86,7 +87,8 @@ class _reset_counter:
 
 
 class Statement(BaseStatement):
-    """Extends the :class:`BaseStatement` class.  This class is normally not
+    """
+    Extends the :class:`BaseStatement` class.  This class is normally not
     instantiated directly, but returned from one of the statement factory
     functions.
 
@@ -104,22 +106,24 @@ class Statement(BaseStatement):
         return getattr(self.model, col, None)
 
     def _get_args_from_model(self):
-        """Returns the values of all the columns for the model set on the
+        """
+        Returns the values of all the columns for the model set on the
         instance. Replacing any ``None`` values with ``'NULL'``.
 
         :raises TypeError: If no model is set or the model is a ``class`` not an
                            instance.
 
         """
+        print('desde args from model....', self.model)
         if not self.model or inspect.isclass(self.model):
             raise TypeError(self.model)
         return tuple(self._get_column(col) for col in self.model.column_names())
 
     def _get_args_from_kwargs(self):
-        """Returns the values of the kwargs set on the instance.
+        """
+        Returns the values of the kwargs set on the instance.
 
         :raises TypeError: If no kwargs are set on the instance.
-
         """
         if not self.kwargs:
             raise TypeError(self.kwargs)
@@ -139,14 +143,15 @@ class Statement(BaseStatement):
 
         """
         try:
-            return self._get_args_from_model()
+            args = self._get_args_from_model()
         except TypeError:
-            return self._get_args_from_kwargs()
+            args = self._get_args_from_kwargs()
+        return args
 
     def _parse_where_items(self,
                            items: ItemsType,
-                           check: typing.Iterable[str]=None,
-                           strict_check: bool=False
+                           check: typing.Iterable[str] = None,
+                           strict_check: bool = False
                            ) -> typing.Tuple[str, typing.Tuple[typing.Any]]:
         """Iterates through the items, building a partial string for use in
         the ``where`` statement.
@@ -187,7 +192,7 @@ class Statement(BaseStatement):
             raise TypeError()
 
         # return the partial ``where`` string and args.
-        return ' AND'.join(strings), tuple(args)
+        return ' AND '.join(strings), tuple(args)
 
     def _parse_where(self, primary_keys=False):
         """Parses the ``model`` or ``kwargs`` set on an instance and builds
@@ -241,7 +246,8 @@ class Statement(BaseStatement):
         return self.set_statement('select', f'SELECT {colstring}')
 
     def insert(self, **kwargs):
-        """Set's the statement as an ``INSERT`` statement.
+        """
+        Set's the statement as an ``INSERT`` statement.
 
         :param kwargs:  Values to use as (column names, query args) for the
                         statement.  These are probably not used much as you
@@ -252,9 +258,20 @@ class Statement(BaseStatement):
         if kwargs:
             self.kwargs = kwargs
 
-        args = self._get_args()
         tablename = self.model.tablename()
-        colstring = self._column_string()
+
+        if isinstance(self.kwargs, dict):
+            values = []
+            cols_name = []
+            for k, v in self.kwargs.items():
+                cols_name.append(k)
+                values.append(v)
+            args = tuple(values)
+            colstring = ', '.join(cols_name)
+        else:
+            args = self._get_args()
+            colstring = self._column_string()
+
         values = ', '.join(
             map(lambda _: '${}'.format(next(self.count)), range(len(args)))
         )
@@ -344,20 +361,24 @@ def select(model):
     return Statement(model).select()
 
 
-def insert(model=None, **kwargs):
-    """Insert statement factory.
+def insert(model=None, values=None, **kwargs):
+    """
+    Insert statement factory.
 
     :param model:  A :class:`ModelABC` subclass instance to create the statement
                    for.
     :param kwargs:  Used for instance values, if the statement is created with
                     a class, not an instance.
-
+    :param values:  Used for create a record from dict values.
     """
+    if values:
+        kwargs = values
     return Statement(model, kwargs).insert()
 
 
 def update(model=None, **kwargs):
-    """Update statement factory.
+    """
+    Update statement factory.
 
     :param model:  A :class:`ModelABC` subclass instance to create the statement
                    for.
@@ -369,7 +390,8 @@ def update(model=None, **kwargs):
 
 
 def delete(model, **kwargs):
-    """Delete statement factory.
+    """
+    Delete statement factory.
 
     :param model:  A :class:`ModelABC` subclass instance to create the statement
                    for.

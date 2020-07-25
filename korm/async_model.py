@@ -356,15 +356,38 @@ class AsyncModel(BaseModel):
     #     """
     #     return cls._pool
 
-    async def create(self) -> None:
+    @classmethod
+    def _check_update(cls):
         pass
+
+    @classmethod
+    async def create(cls, records) -> None:
+        """
+        Insert record(s) to the database.
+
+        :raises .exceptions.ExecutionFailure: If no records were created.
+
+        **Example:**
+
+        .. code-block:: python
+
+            >>> await User.create([{name:'foo'}, {name:'bar'}])
+
+        """
+        async with cls.pool.acquire() as conn:
+            for rec in records:
+                res_string = await conn.execute(*insert(cls, rec))
+                # check the result string, it should end with a '1' if any
+                # records were updated/saved to the database.
+                if not res_string[-1] == '1':  # pragma: no cover
+                    raise ExecutionFailure(f'Failed to insert: {rec}')
 
     async def save(self) -> None:
         """
-        Update or insert an instance to the database.
+        Update an instance to the database.
 
-        :raises .exceptions.ExecutionFailure: If no records were updated or
-                                              saved to the database.
+        :raises .exceptions.ExecutionFailure: If no records were updated
+            to the database.
 
         **Example:**
 
@@ -387,7 +410,7 @@ class AsyncModel(BaseModel):
         # check the result string, it should end with a '1' if any records
         # were updated/saved to the database.
         if not res_string[-1] == '1':  # pragma: no cover
-            raise ExecutionFailure(f'Failed to insert or update: {self}')
+            raise ExecutionFailure(f'Failed to update: {self}')
 
     async def delete(self) -> None:
         """

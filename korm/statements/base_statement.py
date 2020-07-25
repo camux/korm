@@ -7,10 +7,10 @@ from .abstract import StatementABC, SimpleDescriptor
 
 
 def counter(start=1):
-    """Simple counter generator, used to keep track of query args.
+    """
+    Simple counter generator, used to keep track of query args.
 
     :param start:  The number to start out the counter with.
-
     """
     while True:
         yield start
@@ -31,9 +31,9 @@ def _quote_if_str(val):
 
 
 class StatementDescriptor(SimpleDescriptor):
-    """Specialized descriptor for use with the :class:`StatementValues` class.
+    """
+    Specialized descriptor for use with the :class:`StatementValues` class.
     This will raise an error if another statement is already set on an instance.
-
     """
     __slots__ = SimpleDescriptor.__slots__
 
@@ -170,22 +170,24 @@ class StatementValues:
 
 
 class BaseStatement(StatementABC):
-    """Implementation of the :class:`StatementABC`.
-
-
+    """
+    Implementation of the :class:`StatementABC`.
     """
 
-    __slots__ = ('_values', '_model', 'kwargs', 'count')
+    __slots__ = ('_values', '_model', 'kwargs', 'count', 'from_dict')
 
-    def __init__(self, model, kwargs={}, arg_count: int=1):
+    def __init__(self, model, kwargs={}, arg_count: int = 1):
         self.model = model
+        # self.from_dict = from_dict
         self.count = counter(arg_count)
+        print('pasalo ... ', kwargs)
         self.kwargs = kwargs
         self._values = StatementValues()
 
     @property
     def model(self):
-        """Return the database model set on an instance.  And ensures that
+        """
+        Return the database model set on an instance.  And ensures that
         the model is derived from :class:`ModelABC`.
 
         :raises ..exceptions.InvalidModel:  If trying to set an invalid model
@@ -196,6 +198,7 @@ class BaseStatement(StatementABC):
 
     @model.setter
     def model(self, model):
+        print('model ...', model)
         if model:
             if inspect.isclass(model) and not issubclass(model, ModelABC):
                 raise InvalidModel(model)
@@ -242,7 +245,8 @@ class BaseStatement(StatementABC):
         return self._values.query_args()
 
     def _column_string(self, tablename=False) -> str:
-        """Helper that joins the column names of the ``model`` set on the
+        """
+        Helper that joins the column names of the ``model`` set on the
         instance.  Optionally with the ``tablename.column_name`` syntax.
 
         :param tablename:  A bool that tells whether to use the tablename syntax
