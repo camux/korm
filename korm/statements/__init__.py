@@ -260,13 +260,7 @@ class Statement(BaseStatement):
         tablename = self.model.tablename()
 
         if isinstance(self.kwargs, dict):
-            values = []
-            cols_name = []
-            for k, v in self.kwargs.items():
-                cols_name.append(k)
-                values.append(v)
-            args = tuple(values)
-            colstring = ', '.join(cols_name)
+            args, colstring = self._get_args_from_dict(self.kwargs)
         else:
             args = self._get_args()
             colstring = self._column_string()
@@ -307,7 +301,6 @@ class Statement(BaseStatement):
         except (TypeError, ValueError) as exc:
             if safe_call is False:
                 raise
-
         return self
 
     @_callback('where', primary_keys=True)
@@ -352,7 +345,7 @@ class Statement(BaseStatement):
         )
 
     @_callback('where', primary_keys=True)
-    def write(self, kwargs):
+    def write(self, data, kwargs):
         """
         Set's the statement as an ``UPDATE`` statement.  This will
         automatically set a ``where`` statement, using the primary keys.
@@ -364,12 +357,11 @@ class Statement(BaseStatement):
 
         :raises TypeError:  If no args were able to be parsed for the statement.
         """
-        print('leguooooo....', kwargs)
         if kwargs:
             self.kwargs = kwargs
 
         tablename = self.model.tablename()
-        args, colstring = self._get_args_from_dict(self.kwargs)
+        args, colstring = self._get_args_from_dict(data)
         arg_string = ', '.join(
             map(lambda _: '${}'.format(next(self.count)), range(len(args)))
         )
@@ -439,5 +431,5 @@ def write(model, data, **kwargs):
     :param kwargs:  Used for instance values, if the statement is created with
                     a class, not an instance.
     """
-    print('yeaaaaa', kwargs)
-    return Statement(model, kwargs).write(data)
+    kwargs = {'id': data.pop('id')}
+    return Statement(model, kwargs).write(data, kwargs)

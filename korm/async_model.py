@@ -382,7 +382,7 @@ class AsyncModel(BaseModel):
                     raise ExecutionFailure(f'Failed to insert: {rec}')
 
     @classmethod
-    async def write(cls, records, args) -> None:
+    async def write(cls, records) -> None:
         """
         Update records of the model.
 
@@ -400,7 +400,7 @@ class AsyncModel(BaseModel):
             # try an update first. If nothing is updated then the
             # update_result will be 'UPDATE 0'.
             for rec in records:
-                res_string = await conn.execute(*write(rec, args))
+                res_string = await conn.execute(*write(cls, rec))
 
         # check the result string, it should end with a '1' if any records
         # were updated/saved to the database.
