@@ -270,7 +270,7 @@ class Statement(BaseStatement):
         )
         return self.set_statement(
             'insert',
-            f'INSERT INTO {tablename} ({colstring}) VALUES ({values})',
+            f'INSERT INTO {tablename} ({colstring}) VALUES ({values}) RETURNING *',
             args
         )
 

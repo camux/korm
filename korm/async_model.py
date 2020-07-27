@@ -371,15 +371,15 @@ class AsyncModel(BaseModel):
         .. code-block:: python
 
             >>> await User.create([{name:'foo'}, {name:'bar'}])
-
         """
+        result = []
         async with cls.pool.acquire() as conn:
             for rec in records:
-                res_string = await conn.execute(*insert(cls, rec))
-                # check the result string, it should end with a '1' if any
-                # records were updated/saved to the database.
-                if not res_string[-1] == '1':  # pragma: no cover
-                    raise ExecutionFailure(f'Failed to insert: {rec}')
+                # res_string = await conn.execute(*insert(cls, rec))
+                res = await conn.fetch(*insert(cls, rec))
+                print('result --', res)
+                result.extend(res)
+        return result
 
     @classmethod
     async def write(cls, records) -> None:
