@@ -34,8 +34,9 @@ class StatementABC(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def query(self) -> typing.Iterable[typing.Any]:  # pragma: no cover
-        """Return an iterable that can be used in an ``asyncpg`` query.
+    def query(self) -> typing.Iterable[typing.Any]:
+        """
+        Return an iterable that can be used in an ``asyncpg`` query.
         The first value should be the ``query_string``, followed by the
         flattened query args.
 
@@ -43,13 +44,13 @@ class StatementABC(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def set_statement(self, *args, **kwargs):  # pragma: no cover
-        """Set the statement on the instance.
-
+    def set_statement(self, *args, **kwargs):
+        """
+        Set the statement on the instance.
         """
         pass
 
-    def __iter__(self) -> typing.Iterator[typing.Any]:  # pragma: no cover
+    def __iter__(self) -> typing.Iterator[typing.Any]:
         return iter(self.query())
 
     @classmethod

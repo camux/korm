@@ -16,6 +16,11 @@ __all__ = (
 
 ItemsType = typing.Iterable[typing.Tuple[str, typing.Any]]
 
+PY_TO_PGTYPE = {
+    'str': 'CHAR',
+    'int': 'INTEGER',
+}
+
 
 def _callback(callback, *args, **kwargs):
     """
@@ -45,10 +50,10 @@ def _callback(callback, *args, **kwargs):
 
 
 class _reset_counter:
-    """Mark a method to reset the counter when marked.
+    """
+    Mark a method to reset the counter when marked.
 
     :param stmt:  A string to use to split/search for the counter int.
-
     """
     __slots__ = ('_stmt', )
 
@@ -56,7 +61,8 @@ class _reset_counter:
         self._stmt = stmt
 
     def _find_ints(self, string: str) -> typing.Generator[int, None, None]:
-        """Helper to parse and find the integers in a query string after the
+        """
+        Helper to parse and find the integers in a query string after the
         ``stmt`` in a string.
 
         Searches for substrings similar to ['$1', '$2', ...'$n']
@@ -97,7 +103,8 @@ class Statement(BaseStatement):
     __slots__ = BaseStatement.__slots__
 
     def _get_column(self, col: str):
-        """Retrieve the column value from the model set on the instance.
+        """
+        Retrieve the column value from the model set on the instance.
 
         :param col:  The column name to get.
 
@@ -133,13 +140,13 @@ class Statement(BaseStatement):
         )
 
     def _get_args(self):
-        """Get the values to be used as ``args`` for the statement.  We try
+        """
+        Get the values to be used as ``args`` for the statement.  We try
         to get them from the ``model`` set on the instance, if that fails then
         we try to get them from the ``kwargs`` set on the instance.
 
         :raises TypeError:  If failed to get args from the ``model`` or
                             ``kwargs``
-
         """
         try:
             args = self._get_args_from_model()
@@ -147,12 +154,19 @@ class Statement(BaseStatement):
             args = self._get_args_from_kwargs()
         return args
 
+    def _get_in_statement(self, count, args) -> typing.Text:
+        listtype = type(args[0]).__name__
+        datatype = PY_TO_PGTYPE[listtype]
+        in_string = f'any(${count}::{datatype}[])'
+        return in_string
+
     def _parse_where_items(self,
                            items: ItemsType,
                            check: typing.Iterable[str] = None,
                            strict_check: bool = False
                            ) -> typing.Tuple[str, typing.Tuple[typing.Any]]:
-        """Iterates through the items, building a partial string for use in
+        """
+        Iterates through the items, building a partial string for use in
         the ``where`` statement.
 
         :param items:  The items to iterate through.  They should be an iterable
@@ -179,8 +193,14 @@ class Statement(BaseStatement):
                 # passed verification, so we store create a query string
                 # and save the value.
                 count = next(self.count)
-                strings.append(f'{tablename}.{key} = ${count}')
+                if isinstance(value, list):
+                    stm = self._get_in_statement(count, value)
+                    strings.append(f'{tablename}.{key} = {stm}')
+                    value = tuple(value)
+                else:
+                    strings.append(f'{tablename}.{key} = ${count}')
                 args.append(value)
+
             # raise errors if the key is not valid and the caller wants
             # errors to be raised
             elif strict_check is True and check is not None:
@@ -194,7 +214,8 @@ class Statement(BaseStatement):
         return ' AND '.join(strings), tuple(args)
 
     def _parse_where(self, primary_keys=False):
-        """Parses the ``model`` or ``kwargs`` set on an instance and builds
+        """
+        Parses the ``model`` or ``kwargs`` set on an instance and builds
         a partial string and the query args for the ``where`` statement.
 
         :param primary_keys:  If ``True`` then only use the model's primary_keys
@@ -230,16 +251,16 @@ class Statement(BaseStatement):
         raise TypeError()
 
     def from_(self):
-        """Add's the ``FROM`` clause string to the statement.
-
+        """
+        Add's the ``FROM`` clause string to the statement.
         """
         tablename = self.model.tablename()
         return self.set_statement('from_', f'FROM {tablename}')
 
     @_callback('from_')
     def select(self):
-        """Set's the statement as a ``SELECT`` statement.
-
+        """
+        Set's the statement as a ``SELECT`` statement.
         """
         colstring = self._column_string(tablename=True)
         return self.set_statement('select', f'SELECT {colstring}')
@@ -276,7 +297,8 @@ class Statement(BaseStatement):
 
     @_reset_counter('WHERE')
     def where(self, primary_keys=False, safe_call=False, **kwargs):
-        """Add's the ``where`` string to the statement.
+        """
+        Add's the ``where`` string to the statement.
 
         :param primary_keys:  If ``True``, only parse primary keys for the
                               ``where`` string and args.  This is primarily an
@@ -297,7 +319,8 @@ class Statement(BaseStatement):
             if kwargs:
                 self.kwargs = kwargs
             where_str, args = self._parse_where(primary_keys=primary_keys)
-            return self.set_statement('where', f'WHERE {where_str}', args)
+            _stm = self.set_statement('where', f'WHERE {where_str}', args)
+            return _stm
         except (TypeError, ValueError) as exc:
             if safe_call is False:
                 raise

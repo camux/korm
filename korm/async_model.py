@@ -377,7 +377,6 @@ class AsyncModel(BaseModel):
             for rec in records:
                 # res_string = await conn.execute(*insert(cls, rec))
                 res = await conn.fetch(*insert(cls, rec))
-                print('result --', res)
                 result.extend(res)
         return result
 
@@ -540,6 +539,52 @@ class AsyncModel(BaseModel):
                 stmt.where(**kwargs)
             # get the result from the database.
             res = await conn.fetchrow(*stmt)
+
+            if record is False:
+                # return instances of the class, not records
+                return cls.from_record(res)
+            # return instances of the asyncpg record class
+            return res
+
+    @classmethod
+    async def get_many(cls, record: bool = True, **kwargs) -> typing.Any:
+        """
+        Get a many item from the database.
+
+        :param record:  Optional bool. If ``True`` then we return
+                        :class:`asyncpg.Record`'s. If ``False`` then we will
+                        return instances of the ``AsyncModel`` subclass.  If
+                        ``None``, then we default to what's set on the subclass
+                        at the `_return_records` attribute
+                        (default is ``True``).
+        :param kwargs:  Optional kwargs that are passed into a ``where`` clause.
+
+        **Example:**
+
+        .. code-block:: python
+
+            >>> await User.get_many(id=[3, 4])
+            <Record _id=UUID('95ccbcd3-2ded-4ad8-9f68-d60f0b9590a9'),
+            name='foo'>
+            >>> await User.get_many(record=False, name='foo')
+            [
+                User(id=3, name='bar'),
+                User(id=4, name='bar')
+            ]
+
+        """
+        # parse whether to return records or not.
+        record = cls._parse_records(record)
+
+        async with cls.pool.acquire() as conn:
+            stmt = select(cls)
+            # set a where clause on the statement, if kwargs were passed
+            # in.
+            if kwargs:
+                stmt.where(**kwargs)
+
+            # get the result from the database.
+            res = await conn.fetch(*stmt)
 
             if record is False:
                 # return instances of the class, not records
