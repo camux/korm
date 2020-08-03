@@ -336,25 +336,6 @@ class AsyncModel(BaseModel):
     of your subclass.
     """
 
-    # @classmethod
-    # def pool(cls) -> PoolManager:
-    #     """
-    #     Obtain the connection Pool that was registered with the
-    #     subclass during creation.
-    #
-    #     This is typically used with ``async with`` to gain access to an
-    #     :class:`asyncpg.Connection` instance.
-    #
-    #     **Example:**
-    #
-    #     .. code-block:: python
-    #
-    #         >>> async with User.connection() as conn:
-    #                 # do something with the connection.
-    #
-    #     """
-    #     return cls._pool
-
     @classmethod
     def _check_update(cls):
         pass
