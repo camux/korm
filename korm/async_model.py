@@ -3,6 +3,7 @@ import uuid
 from .abstract import AsyncContextManagerABC
 from .exceptions import ExecutionFailure
 from .statements import select, delete, update, insert, write
+from .encoder import encoder
 
 
 def _quote_if_str(val):
@@ -569,6 +570,9 @@ class AsyncModel(BaseModel):
 
             if record is False:
                 # return instances of the class, not records
+                if isinstance(res, list):
+                    _res = {r['id']: encoder(dict(r)) for r in res}
+                    return _res
                 return cls.from_record(res)
             # return instances of the asyncpg record class
             return res
