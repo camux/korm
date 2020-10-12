@@ -6,8 +6,8 @@ from .connection_managers import PoolManager
 from .exceptions import BaseException, ExecutionFailure, InvalidModel
 
 __author__ = """Oscar Alvarez"""
-__email__ = 'info@melhous.com'
-__version__ = '0.1.1'
+__email__ = 'director@melhous.com'
+__version__ = '0.0.2'
 
 __all__ = (
     # abstract classes

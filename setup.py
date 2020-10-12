@@ -20,7 +20,7 @@ test_requirements = [
 
 setup(
     name='korm',
-    version='0.0.1',
+    version='0.0.2',
     description="Killer ORM is lightweight ORM for asyncpg",
     long_description=readme + '\n\n' + history,
     author="Oscar Alvarez",
