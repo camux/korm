@@ -378,7 +378,7 @@ class Statement(BaseStatement):
                         should normally just set the model to an instance of
                         :class:`ModelABC` for the column names and values.
 
-        :raises TypeError:  If no args were able to be parsed for the statement.
+        :raises TypeError: If no args were able to be parsed for the statement.
         """
         if kwargs:
             self.kwargs = kwargs
@@ -388,11 +388,12 @@ class Statement(BaseStatement):
         arg_string = ', '.join(
             map(lambda _: '${}'.format(next(self.count)), range(len(args)))
         )
-        return self.set_statement(
-            'update',
-            f'UPDATE {tablename} SET ({colstring}) = ({arg_string})',
-            args
-        )
+        if len(args) == 1:
+            st_query = f'UPDATE {tablename} SET {colstring} = {arg_string}'
+        else:
+            st_query = f'UPDATE {tablename} SET ({colstring}) = ({arg_string})'
+
+        return self.set_statement('update', st_query, args)
 
 
 def select(model):

@@ -381,6 +381,7 @@ class AsyncModel(BaseModel):
             # try an update first. If nothing is updated then the
             # update_result will be 'UPDATE 0'.
             for rec in records:
+                print(rec)
                 res_string = await conn.execute(*write(cls, rec))
 
         # check the result string, it should end with a '1' if any records

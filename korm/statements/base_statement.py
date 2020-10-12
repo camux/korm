@@ -205,7 +205,8 @@ class BaseStatement(StatementABC):
         self._model = model
 
     def set_statement(
-            self, key: str,
+            self,
+            key: str,
             query_string: str,
             args: typing.Tuple[typing.Any] = None) -> 'BaseStatement':
         """
