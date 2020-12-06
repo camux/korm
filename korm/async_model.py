@@ -274,7 +274,6 @@ class BaseModel(metaclass=ModelMeta):
         return f'{cn}({attr_string})'
 
 
-# TODO:  Update the ``delete`` method to be a classmethod, that accepts kwargs
 class AsyncModel(BaseModel):
     """
     Extends the :class:`BaseModel` class to include helpful database
@@ -414,21 +413,23 @@ class AsyncModel(BaseModel):
         if not res_string[-1] == '1':  # pragma: no cover
             raise ExecutionFailure(f'Failed to update: {self}')
 
-    async def delete(self) -> None:
+    @classmethod
+    async def delete(cls, records) -> None:
         """
         Delete an instance from the database.
 
         :raises .exceptions.ExecutionFailure:  If no records were deleted from
                                                the database.
         """
-        async with self.pool.acquire() as conn:
+        async with cls.pool.acquire() as conn:
             # Delete the row from the database
             # If the statement was successful, then the return value will
             # be 'DELETE 1'
-            delete_result = await conn.execute(*delete(self))
+            for rec in records:
+                delete_result = await conn.execute(*delete(cls, rec))
 
-        if not delete_result[-1] == '1':
-            raise ExecutionFailure(f'Failed to delete: {self}')
+        # if not delete_result[-1] == '1':
+        #     raise ExecutionFailure(f'Failed to delete: {record}')
 
     @classmethod
     def _parse_records(cls, records: typing.Optional[bool]) -> bool:

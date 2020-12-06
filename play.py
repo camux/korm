@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import inspect
 from korm import AsyncModel, Column, ConnectionManager
 from korm.abstract import AsyncModelABC
 

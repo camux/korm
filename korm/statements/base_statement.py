@@ -212,7 +212,6 @@ class BaseStatement(StatementABC):
         """
         Set the statement for an instance, and return ``self`` for method
         chaining.
-
         """
         if query_string:
             self._values[key] = (query_string, args or ())

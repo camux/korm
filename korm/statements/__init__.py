@@ -356,16 +356,18 @@ class Statement(BaseStatement):
         )
 
     @_callback('where', primary_keys=True, safe_call=True)
-    def delete(self):
+    def delete(self, data):
         """Set's the statement as a ``DELETE`` statement.  This will
         automatically set a ``where`` statement, using the primary keys.
 
         """
         tablename = self.model.tablename()
-        return self.set_statement(
+        record_id = dict(data)['id']
+        st = self.set_statement(
             'delete',
-            f'DELETE FROM {tablename}'
+            f'DELETE FROM {tablename} WHERE id={record_id}'
         )
+        return st
 
     @_callback('where', primary_keys=True)
     def write(self, data, kwargs):
@@ -433,17 +435,18 @@ def update(model=None, **kwargs):
     return Statement(model, kwargs).update()
 
 
-def delete(model, **kwargs):
+def delete(model, record, **kwargs):
     """
     Delete statement factory.
 
     :param model:  A :class:`ModelABC` subclass instance to create the statement
                    for.
+    :param record:  A :class:`Dict` with a key 'id' to delete.
     :param kwargs:  Used for instance values, if the statement is created with
                     a class, not an instance.
     """
-
-    return Statement(model, kwargs).delete()
+    print('record ', record)
+    return Statement(model, kwargs).delete(record)
 
 
 def write(model, data, **kwargs):
